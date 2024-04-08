@@ -109,6 +109,42 @@ def aplicar_correlacao():
   cv2.waitKey(0)
   cv2.destroyAllWindows()
 
+def conversao_HSB_RGB(hsb):
+  os.system('cls' if os.name == 'nt' else 'clear')
+
+  imagem_rgb = np.empty_like(hsb)
+
+  for i in range(0, hsb.shape[0]):
+    for j in range(0, hsb.shape[1]):
+      [h, s, v] = hsb[i][j]
+
+      h *= 360
+      c = v * s
+
+      x = c * (1 - abs((h / 60) % 2 - 1))
+
+      if 0 <= h < 60:
+        r, g, b = c, x, 0
+      elif 60 <= h < 120:
+        r, g, b = x, c, 0
+      elif 120 <= h < 180:
+        r, g, b = 0, c, x
+      elif 180 <= h < 240:
+        r, g, b = 0, x, c
+      elif 240 <= h < 300:
+        r, g, b = x, 0, c
+      else:
+        r, g, b = c, 0, x
+      
+      # Adiciona o brilho
+      m = v - c
+      r += m
+      g += m
+      b += m
+      
+      imagem_rgb[i][j] = np.array([r, g, b])
+
+  return imagem_rgb
 
 def conversao_RGB_HSB():
   os.system('cls' if os.name == 'nt' else 'clear')
@@ -186,6 +222,15 @@ while exit == False:
       cv2.imshow('Imagem HSB Programa', hsv)
       convertida = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
       cv2.imshow('Imagem HSB OpenCV', convertida)
+
+      cv2.waitKey(0)
+      cv2.destroyAllWindows()
+
+      print('Conversão de volta para rgb')
+
+      convertendo_rgb = conversao_HSB_RGB(hsv)
+      cv2.imshow('Imagem Original', img)
+      cv2.imshow('Imagem Programa', convertendo_rgb)
 
       cv2.waitKey(0)
       cv2.destroyAllWindows()
