@@ -71,6 +71,7 @@ def aplicar_correlacao():
     for linha in arquivo_filtro:
       info_linha = linha.split(' ')
       linha = []
+      j = 0
       for info in info_linha:
         linha.append(int(info))
 
@@ -81,7 +82,7 @@ def aplicar_correlacao():
   # nova_imagem = [[0 for _ in range(altura + 2 - size + 1)] for _ in range(largura + 2 - size + 1)]
 
   altura, largura, _ = imagem.shape
-  filtro_altura, filtro_largura = [5, 5]
+  filtro_altura, filtro_largura = 5, 5
   
   # Calcula o padding para manter o mesmo tamanho da imagem de saída
   padding_vertical = filtro_altura // 2
@@ -94,12 +95,11 @@ def aplicar_correlacao():
   imagem_filtrada = np.zeros_like(imagem)
   
   # Aplica o filtro à imagem
-  for y in range(altura):
-    for x in range(largura):
-      for canal in range(3):  # Loop através dos canais RGB
-        regiao = imagem_com_padding[y:y+filtro_altura, x:x+filtro_largura, canal]
-        pixel_filtrado = np.sum(regiao * matriz)
-        imagem_filtrada[y, x, canal] = pixel_filtrado
+  for i in range(altura):
+    for j in range(largura):
+      for c in range(3):
+        regiao = imagem_com_padding[i:i+filtro_altura, j:j+filtro_largura, c]
+        imagem_filtrada[i, j, c] = np.sum(regiao * matriz)
 
 
   cv2.imshow('Imagem Original', imagem)
@@ -152,18 +152,28 @@ def conversao_RGB_HSB():
       hsb[i][j] = np.array([h, s, v])
      
 
-  cv2.imshow('Imagem Original', rgb)
-  cv2.imshow('Imagem HSB Programa', hsb)
-  convertida = cv2.cvtColor(rgb, cv2.COLOR_BGR2HSV)
-  cv2.imshow('Imagem HSB OpenCV', convertida)
-
-  cv2.waitKey(0)
-  cv2.destroyAllWindows()
+  return hsb, rgb
 
 def filtro_saturacao_brilho():
   return 0
 
 def atribuir_saturacao():
+  os.system('cls' if os.name == 'nt' else 'clear')
+
+  hsv_original, imagem_original = conversao_RGB_HSB()
+  hsv_destino, imagem_destino = conversao_RGB_HSB()
+
+  saturacao_origem = hsv_original[:,:,1]
+  hsv_destino[:,:,1] = saturacao_origem
+
+  cv2.imshow('Imagem Original', imagem_original)
+  cv2.imshow('Imagem Destino', imagem_destino)
+  cv2.imshow('Imagem Destino com saturação original', hsv_destino)
+
+
+  cv2.waitKey(0)
+  cv2.destroyAllWindows()
+
   return 0
 
 exit = False
@@ -171,7 +181,14 @@ exit = False
 while exit == False:
   match print_menu():
     case 1:
-      conversao_RGB_HSB()
+      hsv, img = conversao_RGB_HSB()
+      cv2.imshow('Imagem Original', img)
+      cv2.imshow('Imagem HSB Programa', hsv)
+      convertida = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+      cv2.imshow('Imagem HSB OpenCV', convertida)
+
+      cv2.waitKey(0)
+      cv2.destroyAllWindows()
     case 2:
       filtro_saturacao_brilho()
     case 3:
