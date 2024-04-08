@@ -117,12 +117,10 @@ def conversao_HSB_RGB(hsb):
   for i in range(0, hsb.shape[0]):
     for j in range(0, hsb.shape[1]):
       [h, s, v] = hsb[i][j]
-
-      h *= 360
       c = v * s
-
       x = c * (1 - abs((h / 60) % 2 - 1))
-
+      m = v - c
+      
       if 0 <= h < 60:
         r, g, b = c, x, 0
       elif 60 <= h < 120:
@@ -135,9 +133,8 @@ def conversao_HSB_RGB(hsb):
         r, g, b = x, 0, c
       else:
         r, g, b = c, 0, x
-      
+    
       # Adiciona o brilho
-      m = v - c
       r += m
       g += m
       b += m
@@ -158,39 +155,63 @@ def conversao_RGB_HSB():
     for j in range(0, rgb.shape[1]):
       [r, g, b] = rgb[i][j]
 
-      # Encontra qual a cor dominante e a cor menos destacada
       maxRGB = max(r, g, b)
       minRGB = min(r, g, b)
-      # Cálculo do delta
       delta = maxRGB - minRGB
-      h = 0
-      s = 0
+      
+      # Calcula o brilho (Value)
       v = maxRGB
-
-      match maxRGB:
-        # Caso Max = R
-        case int(r):
-          h = 60 * (((g - b) / delta))
-        # Caso Max = G
-        case int(g):
-          h = 60 * (((b - r) / delta)) + 120
-        # Caso Max = B
-        case int(b):
-          h = 60 * (((r - g) / delta)) + 240
-
-      # Cálculo de S, igual a 0 caso max igual a 0
+      
+      # Calcula a saturação (Saturation)
       if maxRGB == 0:
-        s = 0
-      # Caso seja diferente de 0
+          s = 0
       else:
-        s = delta / maxRGB
-
+          s = delta / maxRGB
+      
+      # Calcula a matiz (Hue)
+      if delta == 0:
+        h = 0
+      elif maxRGB == r:
+        h = 60 * (((g - b) / delta) % 6)
+      elif maxRGB == g:
+        h = 60 * (((b - r) / delta) + 2)
+      elif maxRGB == b:
+        h = 60 * (((r - g) / delta) + 4)
+      
       hsb[i][j] = np.array([h, s, v])
-     
+    
 
   return hsb, rgb
 
 def filtro_saturacao_brilho():
+  os.system('cls' if os.name == 'nt' else 'clear')
+
+  hue_value = int(input('Adicione o valor do aditivo da matriz\n'))
+  saturation_value = int(input('Adicione o fator do filtro de saturação\n'))
+  bright_value = int(input('Adicione o fator do filtro de brilho\n'))
+
+  hsb, img = conversao_RGB_HSB()
+
+  nova_imagem = np.empty_like(hsb)
+
+  for i in range(0, nova_imagem.shape[0]):
+    for j in range(0, nova_imagem.shape[1]):
+      [h, s, v] = hsb[i][j]
+      novoH = (h + hue_value)
+
+      novoS = s * saturation_value
+      novoV = v * bright_value
+
+      nova_imagem[i][j] = np.array([novoH, novoS, novoV])
+
+  final = conversao_HSB_RGB(nova_imagem)
+  
+  cv2.imshow('Imagem Original', img)
+  cv2.imshow('Imagem Final', final)
+  
+  cv2.waitKey(0)
+  cv2.destroyAllWindows()
+
   return 0
 
 def atribuir_saturacao():
@@ -220,8 +241,6 @@ while exit == False:
       hsv, img = conversao_RGB_HSB()
       cv2.imshow('Imagem Original', img)
       cv2.imshow('Imagem HSB Programa', hsv)
-      convertida = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
-      cv2.imshow('Imagem HSB OpenCV', convertida)
 
       cv2.waitKey(0)
       cv2.destroyAllWindows()
