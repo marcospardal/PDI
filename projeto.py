@@ -1,7 +1,7 @@
 import os
-import time
 import cv2
 import numpy as np
+import math
 
 def print_menu():
   os.system('cls' if os.name == 'nt' else 'clear')
