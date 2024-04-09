@@ -116,30 +116,52 @@ def conversao_HSB_RGB(hsb):
 
   for i in range(0, hsb.shape[0]):
     for j in range(0, hsb.shape[1]):
-      [h, s, v] = hsb[i][j]
-      c = v * s
-      x = c * (1 - abs((h / 60) % 2 - 1))
-      m = v - c
-      
-      if 0 <= h < 60:
-        r, g, b = c, x, 0
-      elif 60 <= h < 120:
-        r, g, b = x, c, 0
-      elif 120 <= h < 180:
-        r, g, b = 0, c, x
-      elif 180 <= h < 240:
-        r, g, b = 0, x, c
-      elif 240 <= h < 300:
-        r, g, b = x, 0, c
+      [h, s, b] = hsb[i][j]
+
+      if (s == 0):
+        r = b
+        g = b
+        b = b
       else:
-        r, g, b = c, 0, x
-    
-      # Adiciona o brilho
-      r += m
-      g += m
-      b += m
-      
-      imagem_rgb[i][j] = np.array([r, g, b])
+        sectorPos = h / 60.0
+        sectorNumber = int(math.floor(sectorPos))
+        fractionalSector = sectorPos - sectorNumber
+
+        p = b * (1.0 - s)
+        q = b * (1.0 - (s * fractionalSector))
+        t = b * (1.0 - (s * (1 - fractionalSector)))
+
+        match (sectorNumber):
+          case 0:
+            r = b
+            g = t
+            b = p
+          case 1:
+            r = q
+            g = b
+            b = p
+          case 2:
+            r = p
+            g = b
+            b = t
+          case 3:
+            r = p
+            g = q
+            b = b
+          case 4:
+            r = t
+            g = p
+            b = b
+          case 5:
+            r = b
+            g = p
+            b = q
+          case 6:
+            r = b
+            g = t
+            b = p
+
+      imagem_rgb[i][j] = np.array([r, g, b], dtype=np.uint32)
 
   return imagem_rgb
 
@@ -148,7 +170,7 @@ def conversao_RGB_HSB():
   
   selected = selecionar_imagem()
   imagem = cv2.imread(f'data/{selected}')
-  rgb = imagem
+  rgb = cv2.cvtColor(imagem, cv2.COLOR_BGR2RGB)
   hsb = np.empty_like(rgb)
 
   for i in range(0, rgb.shape[0]):
@@ -164,21 +186,22 @@ def conversao_RGB_HSB():
       
       # Calcula a saturação (Saturation)
       if maxRGB == 0:
-          s = 0
+        s = 0
       else:
-          s = delta / maxRGB
+        s = 1.0 - (minRGB / maxRGB)
       
-      # Calcula a matiz (Hue)
-      if delta == 0:
-        h = 0
-      elif maxRGB == r:
-        h = 60 * (((g - b) / delta) % 6)
+      h = 0
+      if maxRGB == r:
+        if (g >= b):
+          h = 60 * ((g - b) / delta)
+        else:
+          h = 60 * ((g - b) / delta) + 360
       elif maxRGB == g:
-        h = 60 * (((b - r) / delta) + 2)
+        h = 60 * ((b - r) / delta) + 120
       elif maxRGB == b:
-        h = 60 * (((r - g) / delta) + 4)
+        h = 60 * ((r - g) / delta) + 240
       
-      hsb[i][j] = np.array([h, s, v])
+      hsb[i][j] = [h, s, v]
     
 
   return hsb, rgb
