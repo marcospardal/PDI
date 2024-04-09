@@ -170,7 +170,7 @@ def conversao_RGB_HSB():
   
   selected = selecionar_imagem()
   imagem = cv2.imread(f'data/{selected}')
-  rgb = cv2.cvtColor(imagem, cv2.COLOR_BGR2RGB)
+  rgb = imagem
   hsb = np.empty_like(rgb)
 
   for i in range(0, rgb.shape[0]):
@@ -240,15 +240,19 @@ def filtro_saturacao_brilho():
 def atribuir_saturacao():
   os.system('cls' if os.name == 'nt' else 'clear')
 
-  hsv_original, imagem_original = conversao_RGB_HSB()
-  hsv_destino, imagem_destino = conversao_RGB_HSB()
+  hsb, imagem_original = conversao_RGB_HSB()
+  hsb_destino, imagem_destino = conversao_RGB_HSB()
 
-  saturacao_origem = hsv_original[:,:,1]
-  hsv_destino[:,:,1] = saturacao_origem
+  for i in range(0, hsb.shape[0]):
+    for j in range(0, hsb.shape[1]):
+      hsb_destino[i][j][1] = hsb[i][j][1]
+
+
+  imagem_final = conversao_HSB_RGB(hsb_destino)
 
   cv2.imshow('Imagem Original', imagem_original)
   cv2.imshow('Imagem Destino', imagem_destino)
-  cv2.imshow('Imagem Destino com saturação original', hsv_destino)
+  cv2.imshow('Imagem Destino com saturação original', imagem_final)
 
 
   cv2.waitKey(0)
