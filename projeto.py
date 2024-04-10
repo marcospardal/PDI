@@ -160,8 +160,11 @@ def conversao_HSB_RGB(hsb):
             r = b
             g = t
             b = p
+        r = max(0, min(int(r), 255))
+        g = max(0, min(int(g), 255))
+        b = max(0, min(int(b), 255))
 
-      imagem_rgb[i][j] = np.array([r, g, b], dtype=np.uint32)
+      imagem_rgb[i][j] = (r, g, b)
 
   return imagem_rgb
 
@@ -170,6 +173,7 @@ def conversao_RGB_HSB():
   
   selected = selecionar_imagem()
   imagem = cv2.imread(f'data/{selected}')
+  # rgb = cv2.cvtColor(imagem, cv2.COLOR_BGR2RGB)
   rgb = imagem
   hsb = np.empty_like(rgb)
 
@@ -201,7 +205,7 @@ def conversao_RGB_HSB():
       elif maxRGB == b:
         h = 60 * ((r - g) / delta) + 240
       
-      hsb[i][j] = [h, s, v]
+      hsb[i][j] = (h, s, v)
     
 
   return hsb, rgb
@@ -225,7 +229,7 @@ def filtro_saturacao_brilho():
       novoS = s * saturation_value
       novoV = v * bright_value
 
-      nova_imagem[i][j] = np.array([novoH, novoS, novoV])
+      nova_imagem[i][j] = (novoH, novoS, novoV)
 
   final = conversao_HSB_RGB(nova_imagem)
   
@@ -252,8 +256,8 @@ def atribuir_saturacao():
 
   cv2.imshow('Imagem Original', imagem_original)
   cv2.imshow('Imagem Destino', imagem_destino)
+  cv2.imshow('Imagem Destino HSB', hsb_destino)
   cv2.imshow('Imagem Destino com saturação original', imagem_final)
-
 
   cv2.waitKey(0)
   cv2.destroyAllWindows()
