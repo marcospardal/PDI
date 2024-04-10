@@ -26,7 +26,7 @@ def selecionar_imagem():
     
     action = int(input('Digite o número da imagem escolhida\n'))
 
-  return imagens[action]
+  return f'./data/{imagens[action]}'
 
 def selecionar_filtro():
   filtros = os.listdir('./filtros')
@@ -56,58 +56,6 @@ def sum_matriz(matriz):
 
   return [sum_r, sum_b, sum_g]
 
-def aplicar_correlacao():
-  os.system('cls' if os.name == 'nt' else 'clear')
-
-  imagem = selecionar_imagem()
-  filtro, zeros = selecionar_filtro()
-
-  imagem = cv2.imread(f'data/{imagem}')
-  i = 0
-  j = 0
-  matriz = []
-
-  with open(filtro, 'r') as arquivo_filtro:
-    for linha in arquivo_filtro:
-      info_linha = linha.split(' ')
-      linha = []
-      j = 0
-      for info in info_linha:
-        linha.append(int(info))
-
-      matriz.append(linha)
-
-  size = len(matriz[0])
-  # [altura, largura] = imagem.shape
-  # nova_imagem = [[0 for _ in range(altura + 2 - size + 1)] for _ in range(largura + 2 - size + 1)]
-
-  altura, largura, _ = imagem.shape
-  filtro_altura, filtro_largura = 5, 5
-  
-  # Calcula o padding para manter o mesmo tamanho da imagem de saída
-  padding_vertical = filtro_altura // 2
-  padding_horizontal = filtro_largura // 2
-  
-  # Adiciona o padding à imagem original
-  imagem_com_padding = np.pad(imagem, ((padding_vertical, padding_vertical), (padding_horizontal, padding_horizontal), (0, 0)), mode='constant')
-  
-  # Inicializa uma matriz para armazenar a imagem filtrada
-  imagem_filtrada = np.zeros_like(imagem)
-  
-  # Aplica o filtro à imagem
-  for i in range(altura):
-    for j in range(largura):
-      for c in range(3):
-        regiao = imagem_com_padding[i:i+filtro_altura, j:j+filtro_largura, c]
-        imagem_filtrada[i, j, c] = np.sum(regiao * matriz)
-
-
-  cv2.imshow('Imagem Original', imagem)
-  cv2.imshow('Imagem Filtro Programa', imagem_filtrada)
-  cv2.imshow('Imagem Filtro OpenCV', cv2.GaussianBlur(imagem, (5, 5), 0))
-
-  cv2.waitKey(0)
-  cv2.destroyAllWindows()
 
 def conversao_HSB_RGB(hsb):
   os.system('cls' if os.name == 'nt' else 'clear')
@@ -263,6 +211,128 @@ def atribuir_saturacao():
   cv2.destroyAllWindows()
 
   return 0
+
+# Função para aplicar correlação em uma imagem com um filtro específico
+def correlacao_gauss_box(imagem, filtro):
+    # Obtém as dimensões da imagem e do filtro
+    altura, largura, _ = imagem.shape
+
+    m, n = filtro.shape
+    
+    # Calcula o padding necessário
+    altura_borda = m // 2
+    largura_borda = n // 2
+    
+    # Cria uma nova imagem para armazenar o resultado da correlação
+    imagem_resultante = np.zeros_like(imagem)
+    
+    # Aplica a correlação para cada canal de cor (R, G, B)
+    for c in range(3):
+        # Preenche a imagem com o valor do padding
+        img_bordada = np.pad(imagem[:,:,c], ((altura_borda, altura_borda), (largura_borda, largura_borda)), mode='constant')
+        
+        # Correlação
+        for i in range(altura):
+            for j in range(largura):
+                imagem_resultante[i, j, c] = np.sum(img_bordada[i:i+m, j:j+n] * filtro)
+    
+    # Garante que os valores estejam dentro do intervalo [0, 255]
+    imagem_resultante = np.clip(imagem_resultante, 0, 255)
+    imagem_resultante = imagem_resultante.astype(np.uint8)
+    
+    return imagem_resultante
+
+# Função para aplicar a correlação m x n sobre um canal de cor
+def correlacao_sobel(img, filtro):
+    altura, largura = img.shape
+    m, n = filtro.shape
+    borda_vertical = m // 2
+    borda_horizontal = n // 2
+
+    # Adicionando borda à imagem para tratamento de bordas
+    img_bordada = cv2.copyMakeBorder(img, borda_vertical, borda_vertical, borda_horizontal, borda_horizontal, cv2.BORDER_CONSTANT)
+
+    # Inicializando imagem resultado
+    img_resultado = np.zeros_like(img, dtype=np.float32)
+
+    # Aplicando a correlação
+    for i in range(altura):
+        for j in range(largura):
+            regiao = img_bordada[i:i+m, j:j+n]
+            img_resultado[i, j] = np.sum(regiao * filtro)
+
+    return img_resultado
+
+# Função para expandir histograma
+def expandir_histograma(img):
+    min_val = np.min(img)
+    max_val = np.max(img)
+    img_expandida = (img - min_val) * (255.0 / (max_val - min_val))
+    return img_expandida.astype(np.uint8)
+
+
+def aplicar_correlacao():
+  os.system('cls' if os.name == 'nt' else 'clear')
+
+  imagem = selecionar_imagem()
+  filtro, zeros = selecionar_filtro()
+
+  # Carregar filtros a partir dos arquivos de texto
+  with open(filtro, 'r') as file:
+    filtro_escolhido = np.array([[float(num) for num in line.split(' ')] for line in file.readlines()], dtype=np.float32)
+
+  # Carrega a imagem
+  imagem_escolhida = cv2.imread(imagem)
+
+  # Aplicar a correlação com o filtro escolhido
+  if 'sobel-horizontal' in filtro:
+    canal_r, canal_g, canal_b = cv2.split(imagem_escolhida)
+    
+    # Aplicando a correlação e valor absoluto para cada canal
+    resultado_r_horizontal = np.abs(correlacao_sobel(canal_r, filtro_escolhido))
+    resultado_g_horizontal = np.abs(correlacao_sobel(canal_g, filtro_escolhido))
+    resultado_b_horizontal = np.abs(correlacao_sobel(canal_b, filtro_escolhido))
+
+    # Expandindo histograma
+    resultado_r_horizontal_expandido = expandir_histograma(resultado_r_horizontal)
+    resultado_g_horizontal_expandido = expandir_histograma(resultado_g_horizontal)
+    resultado_b_horizontal_expandido = expandir_histograma(resultado_b_horizontal)
+
+    # Juntando os canais novamente
+    resultado_final = cv2.merge((resultado_r_horizontal_expandido, resultado_g_horizontal_expandido, resultado_b_horizontal_expandido))
+
+  elif 'sobel-vertical' in filtro:
+    canal_r, canal_g, canal_b = cv2.split(imagem_escolhida)
+    
+    # Aplicando a correlação e valor absoluto para cada canal
+    resultado_r_vertical = np.abs(correlacao_sobel(canal_r, filtro_escolhido))
+    resultado_g_vertical = np.abs(correlacao_sobel(canal_g, filtro_escolhido))
+    resultado_b_vertical = np.abs(correlacao_sobel(canal_b, filtro_escolhido))
+
+    # Expandindo histograma
+    resultado_r_vertical_expandido = expandir_histograma(resultado_r_vertical)
+    resultado_g_vertical_expandido = expandir_histograma(resultado_g_vertical)
+    resultado_b_vertical_expandido = expandir_histograma(resultado_b_vertical)
+
+    # Juntando os canais novamente
+    resultado_final = cv2.merge((resultado_r_vertical_expandido, resultado_g_vertical_expandido, resultado_b_vertical_expandido))
+
+  else:
+    resultado_final = correlacao_gauss_box(imagem_escolhida, filtro_escolhido)
+    
+  # Redimensionar as imagens resultantes para as dimensões desejadas
+  resultado_final = cv2.resize(resultado_final, (800, 600))
+  imagem_escolhida = cv2.resize(imagem_escolhida, (800, 600))
+
+  # Exibindo resultados
+  cv2.imshow('Imagem original', imagem_escolhida)
+  cv2.waitKey(0)
+  cv2.destroyAllWindows()
+
+  cv2.imshow('Imagem com filtro escolhido', resultado_final)
+  cv2.waitKey(0)
+  cv2.destroyAllWindows()
+
 
 exit = False
 
