@@ -120,7 +120,7 @@ def conversao_RGB_HSB():
   os.system('cls' if os.name == 'nt' else 'clear')
   
   selected = selecionar_imagem()
-  imagem = cv2.imread(f'data/{selected}')
+  imagem = cv2.imread(selected)
   # rgb = cv2.cvtColor(imagem, cv2.COLOR_BGR2RGB)
   rgb = imagem
   hsb = np.empty_like(rgb)
